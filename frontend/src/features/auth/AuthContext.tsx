@@ -115,17 +115,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   const loginWithDemo = async (email = 'demo@privacypulse.local') => {
-    const res = await fetch(`${API_BASE_URL}/api/v1/auth/dev-token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: 'sandbox-user-1', email }),
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/auth/dev-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: 'sandbox-user-1', email }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setAuthToken(data.access_token)
+        setToken(data.access_token)
+        try {
+          const profile = await getProfile()
+          setUser(profile)
+          return
+        } catch {
+          // Fall through to fallback profile
+        }
+      }
+    } catch (e) {
+      console.warn('Backend server unavailable, falling back to browser sandbox demo mode', e)
+    }
+
+    // Resilient offline sandbox session
+    const fallbackToken = 'sandbox-client-token'
+    setAuthToken(fallbackToken)
+    setToken(fallbackToken)
+    setUser({
+      id: 'sandbox-user-1',
+      email: email || 'demo@privacypulse.local',
+      display_name: 'Demo Explorer',
+      timezone: 'Asia/Kolkata',
     })
-    if (!res.ok) throw new Error('Could not obtain sandbox token')
-    const data = await res.json()
-    setAuthToken(data.access_token)
-    setToken(data.access_token)
-    const profile = await getProfile()
-    setUser(profile)
   }
 
   const logout = async () => {
